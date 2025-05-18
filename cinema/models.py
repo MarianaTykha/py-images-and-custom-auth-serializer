@@ -1,13 +1,16 @@
+import os
+import uuid
+
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.conf import settings
+from django.utils.text import slugify
 
 
 class CinemaHall(models.Model):
     name = models.CharField(max_length=255)
     rows = models.IntegerField()
     seats_in_row = models.IntegerField()
-
     @property
     def capacity(self) -> int:
         return self.rows * self.seats_in_row
@@ -29,10 +32,17 @@ class Actor(models.Model):
 
     def __str__(self):
         return self.first_name + " " + self.last_name
-
     @property
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
+
+
+def upload_movie_image(instance: "Movie", filename: str) -> str:
+    _, extension = os.path.splitext(filename)
+    return os.path.join(
+        "uploads/images/",
+        f"{slugify(instance.title)}-{uuid.uuid4()}{extension}"
+    )
 
 
 class Movie(models.Model):
@@ -41,6 +51,8 @@ class Movie(models.Model):
     duration = models.IntegerField()
     genres = models.ManyToManyField(Genre)
     actors = models.ManyToManyField(Actor)
+    image = models.ImageField(null=True,
+                              upload_to="cinema.models.upload_movie_image")
 
     class Meta:
         ordering = ["title"]
@@ -54,8 +66,9 @@ class MovieSession(models.Model):
     movie = models.ForeignKey(Movie, on_delete=models.CASCADE)
     cinema_hall = models.ForeignKey(CinemaHall, on_delete=models.CASCADE)
 
-    class Meta:
-        ordering = ["-show_time"]
+
+class Meta:
+    ordering = ["-show_time"]
 
     def __str__(self):
         return self.movie.title + " " + str(self.show_time)
@@ -70,7 +83,8 @@ class Order(models.Model):
     def __str__(self):
         return str(self.created_at)
 
-    class Meta:
+
+class Meta:
         ordering = ["-created_at"]
 
 
@@ -83,7 +97,6 @@ class Ticket(models.Model):
     )
     row = models.IntegerField()
     seat = models.IntegerField()
-
     @staticmethod
     def validate_ticket(row, seat, cinema_hall, error_to_raise):
         for ticket_attr_value, ticket_attr_name, cinema_hall_attr_name in [
@@ -126,6 +139,7 @@ class Ticket(models.Model):
             f"{str(self.movie_session)} (row: {self.row}, seat: {self.seat})"
         )
 
-    class Meta:
-        unique_together = ("movie_session", "row", "seat")
-        ordering = ["row", "seat"]
+
+class Meta:
+    unique_together = ("movie_session", "row", "seat")
+    ordering = ["row", "seat"]
