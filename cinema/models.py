@@ -11,6 +11,7 @@ class CinemaHall(models.Model):
     name = models.CharField(max_length=255)
     rows = models.IntegerField()
     seats_in_row = models.IntegerField()
+
     @property
     def capacity(self) -> int:
         return self.rows * self.seats_in_row
@@ -32,6 +33,7 @@ class Actor(models.Model):
 
     def __str__(self):
         return self.first_name + " " + self.last_name
+
     @property
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
@@ -51,8 +53,7 @@ class Movie(models.Model):
     duration = models.IntegerField()
     genres = models.ManyToManyField(Genre)
     actors = models.ManyToManyField(Actor)
-    image = models.ImageField(null=True,
-                              upload_to="cinema.models.upload_movie_image")
+    image = models.ImageField(null=True, upload_to=upload_movie_image)
 
     class Meta:
         ordering = ["title"]
@@ -66,9 +67,8 @@ class MovieSession(models.Model):
     movie = models.ForeignKey(Movie, on_delete=models.CASCADE)
     cinema_hall = models.ForeignKey(CinemaHall, on_delete=models.CASCADE)
 
-
-class Meta:
-    ordering = ["-show_time"]
+    class Meta:
+        ordering = ["-show_time"]
 
     def __str__(self):
         return self.movie.title + " " + str(self.show_time)
@@ -80,12 +80,11 @@ class Order(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE
     )
 
+    class Meta:
+        ordering = ["-created_at"]
+
     def __str__(self):
         return str(self.created_at)
-
-
-class Meta:
-        ordering = ["-created_at"]
 
 
 class Ticket(models.Model):
@@ -97,6 +96,7 @@ class Ticket(models.Model):
     )
     row = models.IntegerField()
     seat = models.IntegerField()
+
     @staticmethod
     def validate_ticket(row, seat, cinema_hall, error_to_raise):
         for ticket_attr_value, ticket_attr_name, cinema_hall_attr_name in [
@@ -134,12 +134,11 @@ class Ticket(models.Model):
             force_insert, force_update, using, update_fields
         )
 
+    class Meta:
+        unique_together = ("movie_session", "row", "seat")
+        ordering = ["row", "seat"]
+
     def __str__(self):
         return (
             f"{str(self.movie_session)} (row: {self.row}, seat: {self.seat})"
         )
-
-
-class Meta:
-    unique_together = ("movie_session", "row", "seat")
-    ordering = ["row", "seat"]
